@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dailies</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="bar">
+  <button id="open" class="primary">Open folder…</button>
+  <button id="reopen" hidden></button>
+  <button id="rescan" hidden title="Re-read the folder; unchanged files come from cache">Rescan</button>
+  <button id="index" hidden title="Every frame of every clip is hashed after a scan: it picks the thumbnails, splits clips into shots and finds where clips share frames. Slow the first time, then cached. Click to stop or resume.">Index frames</button>
+  <span class="seg" id="type">
+    <button data-v="all" class="on">All</button><button data-v="image">Stills</button><button data-v="video">Clips</button>
+  </span>
+  <button id="exportStills" hidden title="Copy every still listed here into a folder you choose, keeping the file names. The originals stay where they are.">Export stills…</button>
+  <select id="folder" title="Folder"><option value="*">All folders</option></select>
+  <input id="q" type="search" placeholder="Filter by name or #tag  ( / )">
+  <label><input type="checkbox" id="starred"> ★ only</label>
+  <label title="The key-frame collection that A, + and Harvest add to">Collect into <select class="kcolsel"></select></label>
+  <select id="sort" title="Sort">
+    <option value="path">Sort: path</option><option value="name">Sort: name</option><option value="mtime">Sort: newest</option>
+  </select>
+  <span class="seg" id="view">
+    <button data-v="library" class="on">Library</button><button data-v="shots" title="Every clip split at its cuts, one frame per shot">Shots</button><button data-v="groups">Variant groups</button><button data-v="joins" title="Frames that clips share: where they could be cut together">Joins</button><button data-v="harvest" title="Scrub every clip and cut frames into key-frame collections">Harvest</button><button data-v="board" title="A canvas of stills, clips and notes, linked by the transitions between them">Storyboard</button>
+  </span>
+  <label title="Minimum perceptual-hash similarity for two frames to count as the same frame">Match ≥
+    <input type="range" id="thr" min="70" max="100" step="1"><output id="thrOut"></output></label>
+  <label><input type="checkbox" id="hover"> Hover plays</label>
+  <button id="help" title="Keyboard shortcuts">?</button>
+</header>
+<div id="status"><span id="statusText">Open a folder of stills and clips to begin.</span><progress id="prog" hidden></progress></div>
+<main id="grid" tabindex="0"></main>
+<section id="detail" class="overlay" hidden></section>
+<section id="compare" class="overlay" hidden></section>
+<section id="sheet" class="overlay" hidden></section>
+<input type="file" id="fallback" webkitdirectory multiple hidden>
+<div id="toast" hidden></div>
+<dialog id="keys">
+  <h2>Keyboard</h2>
+  <table>
+    <tr><th colspan="2">Grid</th></tr>
+    <tr><td>← ↑ → ↓</td><td>Move selection</td></tr>
+    <tr><td>Enter</td><td>Open item / compare group</td></tr>
+    <tr><td>S</td><td>Star</td></tr>
+    <tr><td>A</td><td>Add the selected still to the collection</td></tr>
+    <tr><td>B</td><td>Add the selected still or clip to the storyboard</td></tr>
+    <tr><td>1 2 3</td><td>All / stills / clips</td></tr>
+    <tr><td>G</td><td>Library → shots → variant groups → joins → harvest → storyboard</td></tr>
+    <tr><td>/</td><td>Filter</td></tr>
+    <tr><th colspan="2">Shots</th></tr>
+    <tr><td>V</td><td>Save the shot as its own clip (in an open shot: I and O set its start and end)</td></tr>
+    <tr><td>Click / Enter</td><td>Lay out every frame of the shot</td></tr>
+    <tr><td>Move across a shot</td><td>Preview it</td></tr>
+    <tr><td>A</td><td>Cut the frame on screen into the collection</td></tr>
+    <tr><th colspan="2">Frames of a shot</th></tr>
+    <tr><td>Space</td><td>Play / pause the shot on a loop</td></tr>
+    <tr><td>← ↑ → ↓</td><td>Move between frames (Shift ← →: 10)</td></tr>
+    <tr><td>Click / Enter</td><td>Pick the frame into the collection</td></tr>
+    <tr><td>1–9</td><td>Pick into that collection</td></tr>
+    <tr><td>C</td><td>Copy the frame, full size, to the clipboard</td></tr>
+    <tr><td>Drag a frame</td><td>Drop it, full size, into another tab or app</td></tr>
+    <tr><td>[ &nbsp; ]</td><td>Previous / next shot</td></tr>
+    <tr><th colspan="2">Item</th></tr>
+    <tr><td>← →</td><td>Previous / next item</td></tr>
+    <tr><td>Space</td><td>Play / pause</td></tr>
+    <tr><td>S &nbsp; T &nbsp; C</td><td>Star · add tag · compare variants</td></tr>
+    <tr><td>A</td><td>Add the still, or the clip's frame on screen, to the collection</td></tr>
+    <tr><th colspan="2">Compare</th></tr>
+    <tr><td>Space</td><td>Play / pause all</td></tr>
+    <tr><td>← →</td><td>Scrub 1% (Shift: 10%)</td></tr>
+    <tr><td>1–9</td><td>Star variant</td></tr>
+    <tr><td>D &nbsp; H</td><td>Difference heatmap · hover plays</td></tr>
+    <tr><th colspan="2">Harvest</th></tr>
+    <tr><td>← →</td><td>Step one frame (Shift: 10)</td></tr>
+    <tr><td>↑ ↓</td><td>Previous / next clip</td></tr>
+    <tr><td>Space</td><td>Play / pause the preview</td></tr>
+    <tr><td>Enter / click</td><td>Cut the frame into the highlighted collection</td></tr>
+    <tr><td>1–9</td><td>Cut the frame into that collection</td></tr>
+    <tr><td>N</td><td>New collection</td></tr>
+    <tr><th colspan="2">Storyboard</th></tr>
+    <tr><td>Drag the board / scroll</td><td>Move around (pinch or ⌘-scroll zooms)</td></tr>
+    <tr><td>Double-click the board / N</td><td>New note</td></tr>
+    <tr><td>Drag a panel's dot</td><td>Link to another panel, or branch into a new note</td></tr>
+    <tr><td>Enter / double-click</td><td>Open the panel's still or clip</td></tr>
+    <tr><td>C</td><td>Copy the still, or the clip's last frame, at full size</td></tr>
+    <tr><td>Delete &nbsp; Z</td><td>Remove the selected panel · put back what was last removed</td></tr>
+    <tr><td>F</td><td>Fit the whole board</td></tr>
+    <tr><td>Esc</td><td>Back</td></tr>
+  </table>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+<script src="mp4-muxer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
